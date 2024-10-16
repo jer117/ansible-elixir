@@ -1,0 +1,5 @@
+# Watchdog vars
+watchdog_storage_warning: 85
+watchdog_protocol_mem_limit: 90
+watchdog_frequency: 10
+

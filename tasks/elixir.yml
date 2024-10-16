@@ -1,0 +1,83 @@
+---
+- name: Task create elixir directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  with_items:
+    - "{{ host_config_mount }}"
+    - "{{ host_data_mount }}"
+    - "{{ host_wasm_mount }}"
+    - "{{ host_keys_mount }}"
+
+- name: Task Copy helper scripts
+  become_user: root
+  become: true
+  template:
+    src: scripts/{{ item }}.sh.j2
+    dest: /usr/local/bin/{{ item }}
+    force: true
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  with_items:
+    - elixird
+
+- name: Elixir status scripts
+  become_user: root
+  become: true
+  template:
+    src: scripts/health_check.sh.j2
+    dest: /usr/local/bin/health_check.sh
+    force: true
+    owner: root
+    group: root
+    mode: "0755"
+  vars:
+    secrets_file: "/etc/ansible/host_vars/{{ inventory_hostname }}.yml"
+
+- name: Create cron entry for elixr server and api status
+  cron:
+    user: "root"
+    name: check server status
+    minute: "*"
+    hour: "*"
+    job: /usr/local/bin/health_check.sh
+    state: present
+
+# Validator docker ports
+- name: Task Set validator docker ports
+  set_fact:
+    docker_elixir_ports: "{{ validator_docker_ports }}"
+
+- name: Task Create elixir Docker Container
+  docker_container:
+    name: "{{ elixir_docker_container_name }}"
+    image: "{{ elixir_image }}"
+    state: started
+    memory: "{{ elixir_docker_memory_limit }}"
+    memory_swap: "{{ elixir_docker_memory_limit }}"
+    restart_policy: unless-stopped
+    networks:
+      - name: "elixir-validator-net"
+    ulimits:
+      - nofile:65535:65535
+    networks_cli_compatible: true
+    ports: "{{ validator_docker_ports }}"
+    env:
+      SERVICE_SCHEME: http
+      SERVICE_HOST: "localhost"
+    detach: true
+    volumes:
+      - "{{ host_config_mount }}:{{ docker_config_mount }}"
+      - "{{ host_data_mount }}:{{ docker_data_mount }}"
+      - "{{ host_wasm_mount }}:{{ docker_wasm_mount }}"
+      - "{{ host_keys_mount }}:{{ docker_keys_mount }}"
+    env:
+      ENV: "{{ ENV }}"
+      SIGNER_PRIVATE_KEY: "{{ WALLET_PRIVATE_KEY }}"
+      STRATEGY_EXECUTOR_IP_ADDRESS: "{{ IP }}"
+      STRATEGY_EXECUTOR_DISPLAY_NAME: "{{ NODE_NAME }}"
+      STRATEGY_EXECUTOR_BENEFICIARY: "{{ WALLET_ADDRESS }}"
