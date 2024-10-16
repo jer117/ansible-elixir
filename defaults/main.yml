@@ -1,0 +1,53 @@
+---
+# Docker Images
+
+# ansible-elixir vars
+elixir_docker_container_name: "elixir"
+elixir_binary_name: "elixird"
+
+elixir_image: "elixirprotocol/validator:3.5.1"
+
+# Watchdog vars
+container_watchdog_docker_image: "jer117/watchdog-container:v0.0.3-elixir"
+container_watchdog_container_name: "watchdog-container"
+
+network: "testnet"
+
+role: "elixir"
+
+# host / docker mounts (override if neccessary)
+host_config_mount: /root/.elixird/config
+host_data_mount: /data/elixir
+host_wasm_mount: /data/elixir/wasm
+host_keys_mount: /root/.elixird/keys
+
+docker_config_mount: /root/.elixird/config/
+docker_data_mount: /root/.elixird/data/
+docker_wasm_mount: /root/.elixird/wasm/
+docker_keys_mount: /root/.elixird/keys
+
+# Elixir Ports
+elixir_prometheus_port: 17690
+
+# set docker container memory limit to 80% of available machine memory
+elixir_docker_memory_limit: "{{ (ansible_memory_mb.real.total * 0.8) | round | int }}M"
+
+validator_docker_ports:
+  - "{{ elixir_prometheus_port }}:{{ elixir_prometheus_port }}"
+
+# Monitoring Vars
+prometheus_name: "prometheus"
+
+grafana_agent_http_port: 12345
+grafana_agent_grpc_port: 9095
+
+node_exporter_name: "node-exporter"
+
+# Cadvisor Vars
+cadvisor_enabled: true
+# renovate: datasource=docker depName=gcr.io/cadvisor/cadvisor versioning=docker
+cadvisor_image: gcr.io/cadvisor/cadvisor:v0.49.1
+# the default CADVISOR_HEALTHCHECK_URL is "http://localhost:8080/healthz"
+# so match it
+cadvisor_internal_port: 8080
+cadvisor_port: 24165
